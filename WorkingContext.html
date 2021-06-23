@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title>Working context</title>
+</head>
+<style>
+</style>
+<body>
+  <h1>Working context</h1>
+  <select id="date"></select>
+  <select id="foreground-filter"></select>
+  <input id="filter" type="number" min="1" max="20" value="10"/>
+  <div id="foreground"></div>
+  <div id="events"></div>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script>
+    function translate(x, y) {
+      return 'translate(' + x + ', ' + y + ')';
+    }
+    let svgWidth = 1500;
+    let svgHeight1 = 450;
+    let svgHeight2 = 150;
+    let margin1 = {top: 25, right: 10, bottom: 25, left: 120};
+    let margin2 = {top: 25, right: 10, bottom: 25, left: 120};
+    let width1 = svgWidth - margin1.left - margin1.right;
+    let width2 = svgWidth - margin2.left - margin2.right;
+    let height1 = svgHeight1 - margin1.top - margin1.bottom;
+    let height2 = svgHeight2 - margin2.top - margin2.bottom;
+    let svg1 = d3.select('#foreground')
+      .append('svg')
+      .attr('width', svgWidth)
+      .attr('height', svgHeight1)
+      .attr("viewBox", [0, 0, svgWidth, svgHeight1])
+      .attr('class', 'svg1')
+      .append('g')
+      .attr('transform', translate(margin1.left, margin1.top));
+    let svg2 = d3.select('#events')
+      .append('svg')
+      .attr('width', svgWidth)
+      .attr('height', svgHeight2)
+      .attr("viewBox", [0, 0, svgWidth, svgHeight2])
+      .attr('class', 'svg2')
+      .append('g')
+      .attr('transform', translate(margin2.left, margin2.top));
+    let clip1 = svg1.append("clipPath")
+      .attr("id", 'clip1')
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", width1)
+      .attr("height", height1);
+    svg2.append("clipPath")
+      .attr("id", 'clip2')
+      .append("rect")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", width1)
+      .attr("height", height1);
+    let graph1 = svg1.append('g')
+      .attr('class', 'graph1');
+    let graph2 = svg2.append('g')
+      .attr('class', 'graph2');
+
+    let files = [
+      {'filename': 'WorkingContext 210616 header.csv', 'date': '210616'},
+      {'filename': 'WorkingContext 210617 header.csv', 'date': '210617'},
+      {'filename': 'WorkingContext 210618 header.csv', 'date': '210618'},
+      {'filename': 'WorkingContext 210619 header.csv', 'date': '210619'},
+      {'filename': 'WorkingContext 210621 header.csv', 'date': '210621'},
+      {'filename': 'WorkingContext 210622 header.csv', 'date': '210622'},
+    ];
+    let allData = [];
+    let foregroundData = [];
+    let eventData = [];
+    let processData = [];
+    let ready = 0;
+    
+    function init() {
+      files.forEach(function (x, i, a) {
+        d3.csv(x.filename).then(function(d) {
+          let newD = [];
+          let newFD = [];
+          let newED = [];
+          let tempProcess = '';
+          //let prevEventTime = new Date();
+          d.forEach(function (row, index, array) {
+            let newRow = { ...row,
+              'id': index,
+              'time': new Date(row.year, +row.month - 1, row.day, row.hour, row.minute, row.second, row.ms),
+              'event': row.id === '0' ? 'Switch' : row.e,
+              'process': row.id === '0' ? row.e : '',
+              'window': row.w1 === '' ? '' : row.w2 === '' ? row.w1 : row.w3 === '' ? row.w1 + ',' + row.w2 : row.w1 + ',' + row.w2 + ',' + row.w3,
+              'type': row.id === '1' ? 'Key stroke' : row.id === '2' && row.e !== 'MouseWheel' ? 'Mouse click' : row.id === '2' && row.e === 'MouseWheel' ? 'Mouse wheel' : ''
+            };
+            if (row.id === '0') {
+              newFD.push(newRow);
+              tempProcess = newRow.process;
+            } else {//if (new Date(row.year, +row.month - 1, row.day, row.hour, row.minute) !== prevEventTime) {
+              newRow.process = tempProcess;
+              newED.push(newRow);
+              //prevEventTime = new Date(row.year, +row.month - 1, row.day, row.hour, row.minute);
+            }
+            newD.push(newRow);
+          });
+          allData.push({'date': x.date, 'data': newD});
+          //console.log(allData)
+          let newFD2 = [];
+          let processList = [];
+          //console.log(newFD)
+          newFD.forEach(function (row, index, array) {
+            let end = row.time;
+            if (index + 1 < array.length) {
+              end = array[index + 1].time;
+            }
+            else end.setSeconds(row.time.getSeconds() + 1);
+            let fRow = { ...row,
+              'end': end,
+              'duration': Math.abs(row.time - end)
+            }
+            if (processList.find(e => e.process === fRow.process)) {
+              processList.find(e => e.process === fRow.process).durationSum += fRow.duration;
+            }
+            else {
+              processList.push({
+                'process': fRow.process,
+                'durationSum': fRow.duration
+              });
+            }
+            newFD2.push(fRow);
+          });
+          //console.log(newFD2)
+          processList.sort(function(a, b) {
+            return b.durationSum - a.durationSum;
+          });
+          processData.push({'date': x.date, 'data': processList});
+          let newFD3 = [];
+          newFD2.forEach(function (row, index, array) {
+            let i = processList.findIndex(e => row.process === e.process);
+            let fRow = { ...row,
+              'order': i
+            }
+            newFD3.push(fRow);
+          });
+          foregroundData.push({'date': x.date, 'data': newFD3});
+          //console.log(newFD3);
+          let prevTime = new Date(2021, 0, 1);
+          let prevProcess = '';
+          let count = 0;
+          let onset = new Date(2021, 0, 1);
+          let offset = new Date(2021, 0, 1);
+          let aggrEData = [];
+          let id = 0;
+          ['Key stroke', 'Mouse click', 'Mouse wheel'].forEach(function (type) {
+            newED.filter(row => row.type === type).forEach(function (event, index) {
+                if (Math.abs(event.time - prevTime) > 10000 || prevProcess !== event.process) {
+                  if (index > 0) {
+                    offset = prevTime;
+                    if (onset === offset) offset.setMilliseconds(onset.getMilliseconds() + 100);;
+                    aggrEData.push({
+                      'id': id,
+                      'onset': onset,
+                      'offset': offset,
+                      'count': count,
+                      'type': event.type,
+                      'process': event.process
+                    });
+                    id += 1;
+                  }
+                  count = 0;
+                  onset = event.time;
+                }
+                prevTime = event.time;
+                prevProcess = event.process;
+                count += 1;
+              }
+            )
+          })
+          eventData.push({'date': x.date, 'data': aggrEData});
+          //console.log(newED);
+          ready += 1;
+          
+          if (ready == files.length){
+            let dates = files.map(e => e.date);
+            let dateSelect = d3.select('#date')
+              .selectAll('option')
+              .data(dates)
+              .join('option')
+              .append('option')
+              .property('value', d => d)
+              .text(d => d);
+
+            let svg1XAxis = svg1.append('g')
+              .attr('class', 'svg1XAxis')
+              .attr('transform', translate(0, height1));
+            let svg1YAxis = svg1.append('g')
+              .attr('class', 'svg1YAxis')
+              .attr('transform', translate(0, 0));
+            let svg2XAxis = svg2.append('g')
+              .attr('class', 'svg2XAxis')
+              .attr('transform', translate(0, height2));
+            let svg2YAxis = svg2.append('g')
+              .attr('class', 'svg2YAxis')
+              .attr('transform', translate(0, 0));
+
+            update();
+          }
+        });
+      });
+    }
+
+    function update() {
+      if (ready < files.length) return;
+      let date = d3.select('#date').node().value;
+      //console.log(allData)
+      let thisData = allData.find(e => e.date === date).data;
+      let thisFData = foregroundData.find(e => e.date === date).data;
+      let thisEData = eventData.find(e => e.date === date).data;
+      let thisPData = processData.find(e => e.date === date).data;
+      let animationDuration = 1200;
+      
+      d3.select('#foreground-filter')
+        .selectAll('option')
+        .data([{'process': 'All'}].concat(thisPData), e => e.process)
+        .join('option')
+        .append('option')
+        .property('value', d => d.process)
+        .text(d => d.process);
+      let foregroundFilter = d3.select('#foreground-filter').node().value;
+      let processFilterNum = d3.select('#filter').node().value - 1;
+      if (foregroundFilter !== "All") {
+        //d3.select('#filter').attr("disabled", true);
+        thisFData = thisFData.filter(e => e.process === foregroundFilter);
+        thisEData = thisEData.filter(e => e.process === foregroundFilter);
+      }
+      if (processFilterNum < 0) processFilterNum = 0;
+      else if (processFilterNum > thisPData.length) processFilterNum = thisPData.length;
+      d3.select('#filter').property('value', processFilterNum + 1)
+
+      let bar1X = d3.scaleTime()
+        .domain([
+          thisData[0].time,
+          thisData[thisData.length - 1].time
+        ])
+        .range([0, width1])
+      let filteredPData = thisPData.filter((d, i) => i < processFilterNum).map(d => d.process);
+      filteredPData.push('others')
+      let bar1YTick = d3.scaleBand()
+        .domain(filteredPData)
+        .range([0, height1]);
+      let bar1YTickOthers = (process) => {
+        let p = process;
+        if (!(filteredPData.includes(p))) p = 'others'
+        return d3.scaleBand()
+          .domain(filteredPData)
+          .range([0, height1])(p);
+      }
+      let bar1XAxis = d3.axisBottom(bar1X);
+      let bar1YAxis = d3.axisLeft(bar1YTick);
+      svg1XAxis = d3.select('.svg1XAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar1XAxis);
+      svg1YAxis = d3.select('.svg1YAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar1YAxis);
+
+      let bar1Color = (p) => {
+        let processDomain = ['msedge','Code','explorer','Zoom','notepad','KakaoTalk','WINWORD','AcroRd32','EXCEL'];
+        if (!(processDomain.includes(p))) return '#404040'
+        return d3.scaleOrdinal()
+          .domain(processDomain)
+          .range(['#2DC4CD', '#008AD3', '#FFD664', '#3F85F9', '#7BBAC9', '#FAE100','#134DB2', '#F5463A', '#0F783E'])(p);
+      }
+      
+      let bar2X = d3.scaleTime()
+        .domain([
+          thisData[0].time,
+          thisData[thisData.length - 1].time
+        ])
+        .range([0, width1])
+      let bar2Y = d3.scaleBand()
+        .domain(['Key stroke', 'Mouse click', 'Mouse wheel'])
+        .range([0, height2]);
+      let bar2XAxis = d3.axisBottom(bar2X);
+      let bar2YAxis = d3.axisLeft(bar2Y);
+      svg2XAxis = d3.select('.svg2XAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar2XAxis);
+      svg2YAxis = d3.select('.svg2YAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar2YAxis);
+
+      let bar2Color = d3.scaleOrdinal()
+          .domain(['Key stroke', 'Mouse click', 'Mouse wheel'])
+          .range(['#F248E9', '#EF3E70', '#EF8243']);
+      
+      let bar1Enter = graph1.selectAll('rect')
+        .data(thisFData, d => d.id)
+        .enter()
+        .append('rect')
+        .attr('x', d => bar1X(d.time))
+        .attr('width', d => Math.abs(bar1X(d.end) - bar1X(d.time)))
+        .attr('y', d => bar1YTickOthers(d.process))
+        .attr('height', bar1YTick.bandwidth())
+        .attr("clip-path", 'url(#clip1)')
+        .style('fill', d => bar1Color(d.process))
+        //.style('opacity', 0)
+        //.transition()
+        //.delay(animationDuration)
+        //.duration(animationDuration)
+        .style('opacity', 1)
+
+      let bar1Update = graph1.selectAll('rect')
+        .data(thisFData, d => d.id)
+        //.transition()
+        //.duration(animationDuration)
+        .attr('x', d => bar1X(d.time))
+        .attr('width', d => Math.abs(bar1X(d.end) - bar1X(d.time)))
+        .attr('y', d => bar1YTickOthers(d.process))
+        .attr('height', bar1YTick.bandwidth())
+        .attr("clip-path", 'url(#clip1)')
+        .style('fill', d => bar1Color(d.process))
+        .style('opacity', 1)
+
+      let bar1Exit = graph1.selectAll('rect')
+        .data(thisFData, d => d.id)
+        .exit()
+        //.transition()
+        //.duration(animationDuration)
+        //.attr('y', d => bar1YTickOthers(d.process))
+        //.attr('height', bar1YTick.bandwidth())
+        //.style('opacity', 0)
+        .remove();
+      
+      let bar2Enter = graph2.selectAll('rect')
+        .data(thisEData, d => d.id)
+        .enter()
+        .append('rect')
+        .attr('x', d => bar2X(d.onset))
+        .attr('width', d => Math.abs(bar2X(d.offset) - bar2X(d.onset)))
+        .attr('y', d => bar2Y(d.type))
+        .attr('height', bar2Y.bandwidth())
+        .attr("clip-path", 'url(#clip2)')
+        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+
+      let bar2Update = graph2.selectAll('rect')
+        .data(thisEData, d => d.id)
+        .attr('x', d => bar2X(d.onset))
+        .attr('width', d => Math.abs(bar2X(d.offset) - bar2X(d.onset)))
+        .attr('y', d => bar2Y(d.type))
+        .attr('height', bar2Y.bandwidth())
+        .attr("clip-path", 'url(#clip2)')
+        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+
+      let bar2Exit = graph2.selectAll('rect')
+        .data(thisEData, d => d.id)
+        .exit()
+        .remove();
+
+      
+      let zoom1 = d3.zoom()
+        .scaleExtent([1, 32])
+        .extent([[0, 0], [width1, svgHeight1]])
+        .translateExtent([[0, -Infinity], [width1, Infinity]])
+        .on("zoom", zoomed);
+      
+      let zoom2 = d3.zoom()
+        .scaleExtent([1, 32])
+        .extent([[0, 0], [width2, svgHeight2]])
+        .translateExtent([[0, -Infinity], [width2, Infinity]])
+        .on("zoom", zoomed);
+
+      d3.select('.svg1').call(zoom1);
+      d3.select('.svg2').call(zoom2);
+
+      function zoomed(event) {
+        let xz1 = event.transform.rescaleX(bar1X);
+        let xz2 = event.transform.rescaleX(bar2X);
+        graph1.selectAll('rect')
+          .data(thisFData, d => d.id)
+          .attr('x', d => xz1(d.time))
+          .attr('width', d => Math.abs(xz1(d.end) - xz1(d.time)));
+        graph2.selectAll('rect')
+          .data(thisEData, d => d.id)
+          .attr('x', d => xz2(d.onset))
+          .attr('width', d => Math.abs(xz2(d.offset) - xz2(d.onset)));
+        svg1XAxis.call(d3.axisBottom(xz1));
+        svg2XAxis.call(d3.axisBottom(xz2));
+      }
+      
+    }
+
+    init();
+
+    d3.select('#date').on('change', function(event, k) {
+      update();
+    });
+
+    d3.select('#filter').on('change', function(event, k) {
+      update();
+    });
+
+    d3.select('#foreground-filter').on('change', function(event, k) {
+      update();
+    });
+  </script>
+</body>
