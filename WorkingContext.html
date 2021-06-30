@@ -62,12 +62,7 @@
       .attr('class', 'graph2');
 
     let files = [
-      {'filename': 'WorkingContext 210616 header.csv', 'date': '210616'},
-      {'filename': 'WorkingContext 210617 header.csv', 'date': '210617'},
-      {'filename': 'WorkingContext 210618 header.csv', 'date': '210618'},
-      {'filename': 'WorkingContext 210619 header.csv', 'date': '210619'},
-      {'filename': 'WorkingContext 210621 header.csv', 'date': '210621'},
-      {'filename': 'WorkingContext 210622 header.csv', 'date': '210622'},
+      {'filename': 'WorkingContext.csv', 'date': 'today'},
     ];
     let allData = [];
     let foregroundData = [];
@@ -381,6 +376,7 @@
       function zoomed(event) {
         let xz1 = event.transform.rescaleX(bar1X);
         let xz2 = event.transform.rescaleX(bar2X);
+        let scaleFactor = event.transform.k;
         graph1.selectAll('rect')
           .data(thisFData, d => d.id)
           .attr('x', d => xz1(d.time))
