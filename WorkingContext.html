@@ -2,14 +2,36 @@
 <meta charset="utf-8">
 <head>
   <title>Working context</title>
+  <style>
+    body {
+      margin: 0;
+    }
+    .header {
+      padding-left: 16px;
+      padding-top: 0.5px;
+      padding-bottom: 0.5px;
+      text-align: left;
+      background: #765EFF;
+      color: white;
+      font-size: 16px;
+    }
+    .setting {
+      padding-left: 10px;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      background: #D1CCFF;
+    }
+  </style>
 </head>
-<style>
-</style>
 <body>
-  <h1>Working context</h1>
-  <select id="date"></select>
-  <select id="foreground-filter"></select>
-  <input id="filter" type="number" min="1" max="20" value="10"/>
+  <div class="header">
+    <h1>Working context</h1>
+  </div>
+  <div class="setting">
+    <select id="date"></select>
+    <select id="foreground-filter"></select>
+    <input id="filter" type="number" min="1" max="20" value="10"/>
+  </div>
   <div id="foreground"></div>
   <div id="events"></div>
   <script src="https://d3js.org/d3.v6.min.js"></script>
@@ -17,28 +39,28 @@
     function translate(x, y) {
       return 'translate(' + x + ', ' + y + ')';
     }
-    let svgWidth = 1500;
-    let svgHeight1 = 450;
-    let svgHeight2 = 150;
-    let margin1 = {top: 25, right: 10, bottom: 25, left: 120};
-    let margin2 = {top: 25, right: 10, bottom: 25, left: 120};
+    let svgWidth = screen.width;
+    let svgHeight1 = (screen.height - 121.88) * 0.63;
+    let svgHeight2 = (screen.height - 121.88) * 0.21;
+    let margin1 = {top: 25, right: 25, bottom: 25, left: 140};
+    let margin2 = {top: 25, right: 25, bottom: 25, left: 140};
     let width1 = svgWidth - margin1.left - margin1.right;
     let width2 = svgWidth - margin2.left - margin2.right;
     let height1 = svgHeight1 - margin1.top - margin1.bottom;
     let height2 = svgHeight2 - margin2.top - margin2.bottom;
     let svg1 = d3.select('#foreground')
       .append('svg')
-      .attr('width', svgWidth)
-      .attr('height', svgHeight1)
       .attr("viewBox", [0, 0, svgWidth, svgHeight1])
+      .attr('width', "100%")
+      .attr('height', "63%")
       .attr('class', 'svg1')
       .append('g')
       .attr('transform', translate(margin1.left, margin1.top));
     let svg2 = d3.select('#events')
       .append('svg')
-      .attr('width', svgWidth)
-      .attr('height', svgHeight2)
       .attr("viewBox", [0, 0, svgWidth, svgHeight2])
+      .attr('width', "100%")
+      .attr('height', "21%")
       .attr('class', 'svg2')
       .append('g')
       .attr('transform', translate(margin2.left, margin2.top));
@@ -62,7 +84,8 @@
       .attr('class', 'graph2');
 
     let files = [
-      {'filename': 'WorkingContext.csv', 'date': 'today'},
+      {'filename': './Data/ChordingCoding_context_log_221017.csv', 'date': '221017'},
+      {'filename': './Data/ChordingCoding_context_log_221111.csv', 'date': '221111'},
     ];
     let allData = [];
     let foregroundData = [];
@@ -82,12 +105,12 @@
             let newRow = { ...row,
               'id': index,
               'time': new Date(row.year, +row.month - 1, row.day, row.hour, row.minute, row.second, row.ms),
-              'event': row.id === '0' ? 'Switch' : row.e,
-              'process': row.id === '0' ? row.e : '',
+              'event': row.id === 'Process' ? 'Switch' : row.e,
+              'process': row.id === 'Process' ? row.e : '',
               'window': row.w1 === '' ? '' : row.w2 === '' ? row.w1 : row.w3 === '' ? row.w1 + ',' + row.w2 : row.w1 + ',' + row.w2 + ',' + row.w3,
-              'type': row.id === '1' ? 'Key stroke' : row.id === '2' && row.e !== 'MouseWheel' ? 'Mouse click' : row.id === '2' && row.e === 'MouseWheel' ? 'Mouse wheel' : ''
+              'type': row.id === 'Key' ? 'Key stroke' : row.id === 'Mouse' && row.e !== 'MouseWheel' ? 'Mouse click' : row.id === 'Mouse' && row.e === 'MouseWheel' ? 'Mouse wheel' : ''
             };
-            if (row.id === '0') {
+            if (row.id === 'Process') {
               newFD.push(newRow);
               tempProcess = newRow.process;
             } else {//if (new Date(row.year, +row.month - 1, row.day, row.hour, row.minute) !== prevEventTime) {
@@ -261,11 +284,24 @@
         .call(bar1YAxis);
 
       let bar1Color = (p) => {
-        let processDomain = ['msedge','Code','explorer','Zoom','notepad','KakaoTalk','WINWORD','AcroRd32','EXCEL'];
+        let processDomain = [
+        'msedge','Code','explorer','Zoom','notepad',
+        'KakaoTalk','WINWORD','AcroRd32','Acrobat','EXCEL',
+        'ChordingCoding','GoogleDriveFS','rstudio','SnippingTool','slack',
+        'NWC2','POWERPNT','chrome','devenv','obs64',
+        'wmplayer','HncDic','Melon Player','powershell','putty',
+        'audacity','Spotify','paintdotnet','mintty','WindowsTerminal'];
         if (!(processDomain.includes(p))) return '#404040'
         return d3.scaleOrdinal()
           .domain(processDomain)
-          .range(['#2DC4CD', '#008AD3', '#FFD664', '#3F85F9', '#7BBAC9', '#FAE100','#134DB2', '#F5463A', '#0F783E'])(p);
+          .range([
+            '#2DC4CD', '#008AD3', '#FFD664', '#3F85F9', '#7BBAC9',
+            '#FAE100', '#134DB2', '#F5463A', '#F5463A', '#0F783E',
+            '#43E143', '#FFBA00', '#75AADB', '#E52D2D', '#E01E5A',
+            '#00FFFF', '#BC3617', '#2D7CEE', '#A679DD', '#1B181B',
+            '#F68D2B', '#996A34', '#1ED255', '#467AD6', '#0000FF',
+            '#0000EB', '#1ED760', '#3969BA', '#F97F7C', '#404040'
+          ])(p);
       }
       
       let bar2X = d3.scaleTime()
@@ -275,7 +311,7 @@
         ])
         .range([0, width1])
       let bar2Y = d3.scaleBand()
-        .domain(['Key stroke', 'Mouse click', 'Mouse wheel'])
+        .domain(['Key stroke', 'Mouse click'])
         .range([0, height2]);
       let bar2XAxis = d3.axisBottom(bar2X);
       let bar2YAxis = d3.axisLeft(bar2Y);
@@ -289,8 +325,8 @@
         .call(bar2YAxis);
 
       let bar2Color = d3.scaleOrdinal()
-          .domain(['Key stroke', 'Mouse click', 'Mouse wheel'])
-          .range(['#F248E9', '#EF3E70', '#EF8243']);
+          .domain(['Key stroke', 'Mouse click'])
+          .range(['#404040', '#404040', '#404040']);
       
       let bar1Enter = graph1.selectAll('rect')
         .data(thisFData, d => d.id)
