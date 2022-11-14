@@ -33,8 +33,8 @@
     <input id="filter" type="number" min="1" max="20" value="10"/>
   </div>
   <div id="global"></div>
-  <div id="foreground"></div>
-  <div id="events"></div>
+  <!--div id="foreground"></div>
+  <div id="events"></div-->
   <div id="annotation"></div>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script>
@@ -56,9 +56,9 @@
     let height3 = svgHeight3 - margin3.top - margin3.bottom;
     let svg = d3.select("#global")
       .append('svg')
-      .attr("viewBox", [0, 0, svgWidth, (screen.height - 121.88) * 0.84])
+      .attr("viewBox", [0, 0, svgWidth, (screen.height - 121.88) * 0.66])
       .attr("width", "100%")
-      .attr("height", "84%")
+      .attr("height", "66%")
       .attr('class', 'svg')
     let svg1 = d3.select('.svg')
       .append('g')
@@ -77,12 +77,11 @@
       .attr('class', 'svg2')
       .append('g')
       .attr('transform', translate(margin2.left, margin2.top));
-    let svg3 = d3.select('.svg')
-      .append('g')
+    let svg3 = d3.select('#annotation')
+      .append('svg')
       .attr("viewBox", [0, 0, svgWidth, svgHeight3])
       .attr('width', "100%")
       .attr('height', "14%")
-      .attr('transform', "translate(0, " + (screen.height - 121.88) * 0.66 + ")")
       .attr('class', 'svg3')
     
     svg3
@@ -572,7 +571,7 @@
       */
 
       function zoomed(event) {
-        if (event.type === "start" || event.type === "brush" || event.type === "end") return;
+        //if (event.type === "start" || event.type === "brush" || event.type === "end") return;
         let xz = event.transform.rescaleX(barX);
         let scaleFactor = event.transform.k;
 
@@ -604,7 +603,7 @@
         svg3XAxis.call(d3.axisBottom(xz));
       }
 
-      /*
+      
       let brush = d3.brushX()
         .extent([[margin3.left, margin3.top], [svgWidth - margin3.right, svgHeight3 - margin3.bottom]])
         .on("start brush end", brushed);
@@ -617,7 +616,7 @@
       
       function brushed(event) {
         //console.log(event);
-        if (event.type === "zoom") return;
+        //if (event.type === "zoom") return;
         const selection = event.selection;
         if (selection === null) {
           const [mx] = d3.pointer(event, this);
@@ -640,7 +639,7 @@
         .select(".selection")
         .attr("fill", "#765EFF")
         .attr("stroke", "#413591")
-      */
+      
     }
 
     init();
