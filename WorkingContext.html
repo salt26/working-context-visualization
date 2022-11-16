@@ -48,6 +48,10 @@
       border: #64D820 2px;
       border-radius: 2px;
     }
+    #working-hours {
+      float: right;
+      padding-right: 10px;
+    }
   </style>
 </head>
 <body>
@@ -55,9 +59,12 @@
     <h1>Working context</h1>
   </div>
   <div class="setting">
-    <select id="date"></select>
-    <select id="foreground-filter"></select>
-    <input id="filter" type="number" min="1" max="20" value="10"/>
+    <span class="inputs">
+      <select id="date"></select>
+      <select id="foreground-filter"></select>
+      <input id="filter" type="number" min="1" max="20" value="10"/>
+    </span>
+    <span id="working-hours">Today's working hours <b class="time">00:00:00</b></span>
   </div>
   <div id="global"></div>
   <!--div id="foreground"></div>
@@ -75,7 +82,7 @@
     let svgWidth = screen.width;
     let svgHeight1 = (screen.height - 121.88) * 0.52;
     let svgHeight2 = (screen.height - 121.88) * 0.14;
-    let svgHeight3 = (screen.height - 121.88) * 0.14;
+    let svgHeight3 = (screen.height - 121.88) * 0.18;
     let margin1 = {top: 25, right: 25, bottom: 25, left: 140};
     let margin2 = {top: 25, right: 25, bottom: 25, left: 140};
     let margin3 = {top: 41, right: 25, bottom: 41, left: 140};
@@ -108,7 +115,7 @@
       .append('svg')
       .attr("viewBox", [0, 0, svgWidth, svgHeight3])
       .attr('width', "100%")
-      .attr('height', "14%")
+      .attr('height', "18%")
       .attr('class', 'svg3')
     
     svg1
@@ -290,6 +297,141 @@
         brushedEndTime = brushedStartTime;
         update();
       });
+
+    // https://reginafurness.medium.com/implementing-a-max-heap-in-javascript-b3e2f788390c
+    class MaxHeap {
+      /* element format: {'order': Number, ...} */
+      constructor() {
+        this.values = [];
+      }
+
+      parent(index) {
+        return Math.floor((index - 1) / 2);
+      }
+
+      leftChild(index) {
+        return (index * 2) + 1;
+      }
+
+      rightChild(index) {
+        return (index * 2) + 2;
+      }
+
+      isLeaf(index) {
+        return (
+            index >= Math.floor(this.values.length / 2) && index <= this.values.length - 1
+        )
+      }
+
+      swap(index1, index2) {
+        [this.values[index1], this.values[index2]] = [this.values[index2], this.values[index1]];
+      }
+
+      add(element) {
+        // add element to the end of the heap
+        this.values.push(element);
+        // move element up until it's in the correct position
+        this.heapifyUp(this.values.length - 1);
+      }
+
+      heapifyUp(index) {
+        let currentIndex = index,
+            parentIndex = this.parent(currentIndex);
+    
+        // while we haven't reached the root node and the current element is greater than its parent node
+        while (currentIndex > 0 && this.values[currentIndex].order > this.values[parentIndex].order) {
+            // swap
+            this.swap(currentIndex, parentIndex);
+            // move up the binary heap
+            currentIndex = parentIndex;
+            parentIndex = this.parent(parentIndex);
+        }
+      }
+
+      extractMax() {
+        if (this.values.length < 1) return 'heap is empty';
+    
+        // get max and last element
+        const max = this.values[0];
+        const end = this.values.pop();
+
+        // reassign first element to the last element
+        this.values[0] = end;
+        console.log("extractMax")
+        console.log({...this.values});
+        // heapify down until element is back in its correct position
+        this.heapifyDown(0);
+    
+        // return the max
+        return max;
+      }
+
+      heapifyDown(index) {
+        // if the node at index has children
+        if (!this.isLeaf(index)) {
+    
+            // get indices of children
+            let leftChildIndex = this.leftChild(index),
+                rightChildIndex = this.rightChild(index),
+    
+                // start out largest index at parent index
+                largestIndex = index;
+    
+            // if the left child > parent
+            if (this.values[leftChildIndex].order > this.values[largestIndex].order) {
+                // reassign largest index to left child index
+                largestIndex = leftChildIndex;
+            }
+    
+            // if the right child > element at largest index (either parent or left child)
+            if (rightChildIndex < this.values.length &&
+                this.values[rightChildIndex].order >= this.values[largestIndex].order) {
+                // reassign largest index to right child index
+                largestIndex = rightChildIndex;
+            }
+    
+            // if the largest index is not the parent index
+            if (largestIndex !== index) {
+                // swap
+                this.swap(index, largestIndex);
+                // recursively move down the heap
+                this.heapifyDown(largestIndex);
+            }
+        }
+      }
+
+      buildHeap(array) {
+        this.values = array;
+        // since leaves start at floor(nodes / 2) index, we work from the leaves up the heap
+        for(let i = Math.floor(this.values.length / 2); i >= 0; i--){
+            this.heapifyDown(i);
+        }
+      }
+
+      peek() {
+        return this.values[0];
+      }
+
+      delete(element) {
+        console.log(element)
+        console.log(this.values)
+        let deletingIndex = this.values.findIndex(e => e.order === element.order);
+        this.values[deletingIndex].order = this.values[0].order + 1;
+        this.heapifyUp(deletingIndex);
+
+        return this.extractMax();
+      }
+
+      print() {
+        let i = 0;
+        while (!this.isLeaf(i)) {
+            console.log("PARENT:", this.values[i]);
+            console.log("LEFT CHILD:", this.values[this.leftChild(i)]);
+            console.log("RIGHT CHILD:", this.values[this.rightChild(i)]);
+            i++;
+        }      
+      }
+    }
     
     function init() {
       files.forEach(function (x, i, a) {
@@ -491,6 +633,102 @@
       if (processFilterNum < 0) processFilterNum = 0;
       else if (processFilterNum > thisPData.length) processFilterNum = thisPData.length;
       d3.select('#filter').property('value', processFilterNum + 1)
+
+      let separators = [];
+      let newSeparators = [];
+      thisAData.forEach(e => {
+        separators.push({
+          'order': e.id,
+          'time': e.start,
+          'is_end': false,
+          'annotation': e.annotation
+        });
+        separators.push({
+          'order': e.id,
+          'time': e.end,
+          'is_end': true,
+          'annotation': e.annotation
+        });
+      });
+      separators.sort((a, b) => {
+        return a.time - b.time;
+      });
+      //console.log(separators);
+      let tempAnnotation = "Empty";
+      let tempAnnotationOrder = -1;
+      let tempMaxHeap = new MaxHeap();
+      separators.forEach(e => {
+        if (!e.is_end && e.order > tempAnnotationOrder) {
+          //console.log("start high")
+          tempMaxHeap.add({'order': tempAnnotationOrder, 'annotation': tempAnnotation});
+          //console.log({'order': tempAnnotationOrder, 'annotation': tempAnnotation})
+          //console.log(tempMaxHeap.values);
+          if (e.annotation !== tempAnnotation) {
+            newSeparators.push({'time': e.time, 'annotation': e.annotation});
+          }
+          tempAnnotation = e.annotation;
+          tempAnnotationOrder = e.order;
+        }
+        else if (!e.is_end && e.order < tempAnnotationOrder) {
+          //console.log("start low")
+          tempMaxHeap.add({'order': e.order, 'annotation': e.annotation});
+          //console.log({'order': e.order, 'annotation': e.annotation})
+        }
+        else if (!e.is_end) {
+          console.log("why happened? Starting point with same order cannot be exist!")
+        }
+        else if (e.order > tempAnnotationOrder) {
+          console.log("why happened? Ending point with higher order cannot be exist!")
+        }
+        else if (e.order === tempAnnotationOrder) {
+          //console.log("end same")
+          //console.log({...tempMaxHeap.values})
+          let oldElement = tempMaxHeap.extractMax();
+          //console.log({...tempMaxHeap.values})
+          if (oldElement.annotation !== tempAnnotation) {
+            newSeparators.push({'time': e.time, 'annotation': oldElement.annotation});
+          }
+          tempAnnotation = oldElement.annotation;
+          tempAnnotationOrder = oldElement.order;
+        }
+        else {
+          //console.log("end low")
+          tempMaxHeap.delete({'order': e.order, 'annotation': e.annotation});
+        }
+      });
+      console.log(newSeparators);
+
+      thisAData = [];
+      let count = 0;
+      let workingHours = 0;
+      newSeparators.forEach((e, i, array) => {
+        if (e.annotation !== "Empty" && i < array.length - 1) {
+          thisAData.push({
+            'id': count++,
+            'start': e.time,
+            'end': array[i + 1].time,
+            'annotation': e.annotation
+          });
+          if (e.annotation === "Work") {
+            workingHours += array[i + 1].time - e.time;
+          }
+        }
+      });
+      console.log(thisAData);
+      
+      function millisecondToStr(millisecond) {
+        if (millisecond < 0) millisecond *= -1;
+        let hour = Math.floor(millisecond / 1000 / 60 / 60);
+        if (hour < 10) hour = "0" + hour;
+        let minute = Math.floor((millisecond / 1000 / 60) % 60);
+        if (minute < 10) minute = "0" + minute;
+        let second = Math.floor(((millisecond + 500) / 1000) % 60);
+        if (second < 10) second = "0" + second;
+        return hour + ":" + minute + ":" + second;
+      }
+
+      d3.select('.time')
+        .text(millisecondToStr(workingHours));
 
       let barX = d3.scaleTime()
         .domain([
@@ -723,17 +961,6 @@
         .exit()
         .remove();
 
-      function millisecondToStr(millisecond) {
-        if (millisecond < 0) millisecond *= -1;
-        let hour = Math.floor(millisecond / 1000 / 60 / 60);
-        if (hour < 10) hour = "0" + hour;
-        let minute = Math.floor((millisecond / 1000 / 60) % 60);
-        if (minute < 10) minute = "0" + minute;
-        let second = Math.floor(((millisecond + 500) / 1000) % 60);
-        if (second < 10) second = "0" + second;
-        return hour + ":" + minute + ":" + second;
-      }
-
       bar1Enter.merge(bar1Update)
         .append("title")
         .text(function(d) {
@@ -753,6 +980,8 @@
         .text(function(d) {
           return d.annotation + " time\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start);
         });
+
+      
       
       let zoom1 = d3.zoom()
         .scaleExtent([1, 32])
@@ -864,6 +1093,10 @@
             .select('.selection')
             .append('title')
             .text("Start: " + brushedStartTime + "\nEnd:  " + brushedEndTime + "\nDuration: " + millisecondToStr(brushedEndTime - brushedStartTime))
+          d3.selectAll('.annotated-area')
+            .selectAll('rect')
+            .append('title')
+            .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
           
 
           if (brushedEndTime - brushedStartTime >= 60000) {
