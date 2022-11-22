@@ -29,16 +29,6 @@
       display: none;
     }
     #work-button {
-      background-color: #FFD4CC;
-      background-image: linear-gradient(to top left,
-                                      rgba(0, 0, 0, .2),
-                                      rgba(0, 0, 0, .2) 30%,
-                                      rgba(0, 0, 0, 0));
-      color: black;
-      border: #D83C20 2px;
-      border-radius: 2px;
-    }
-    #rest-button {
       background-color: #E1FFCE;
       background-image: linear-gradient(to top left,
                                       rgba(0, 0, 0, .2),
@@ -48,9 +38,25 @@
       border: #64D820 2px;
       border-radius: 2px;
     }
+    #rest-button {
+      background-color: #FFD4CC;
+      background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+      color: black;
+      border: #D83C20 2px;
+      border-radius: 2px;
+    }
     #working-hours {
       float: right;
       padding-right: 10px;
+    }
+    .time {
+      color: #307F00;
+    }
+    .rest-time {
+      color: #7F1300;
     }
   </style>
 </head>
@@ -64,7 +70,7 @@
       <select id="foreground-filter"></select>
       <input id="filter" type="number" min="1" max="20" value="10"/>
     </span>
-    <span id="working-hours">Today's working hours <b class="time">00:00:00</b></span>
+    <span id="working-hours">Today's working hours <b class="time">00:00:00 (0%)</b> | resting hours <b class="rest-time">00:00:00 (100%)</b></span>
   </div>
   <div id="global"></div>
   <!--div id="foreground"></div>
@@ -166,7 +172,7 @@
       .attr('class', 'annotating-button')
       .attr('text-anchor', 'middle')
       .append('text')
-      .text('Mark as "Work" time')
+      .text("Mark as 'work' time")
       .attr("fill", "black")
       .attr('x', 96)
       .attr('y', 25);
@@ -179,8 +185,8 @@
       .attr('ry', 5)
       .attr("width", 192)
       .attr("height", 40)
-      .attr("fill", "#BF1C00")
-      .attr("stroke", "#330600")
+      .attr("fill", "#5BE500")
+      .attr("stroke", "#143300")
       .attr("opacity", 0.4)
       .on("mouseover", function() {
         d3.select(this)
@@ -193,7 +199,7 @@
 
     d3.select('.annotating-button')
       .append('text')
-      .text('Mark as "Rest" time')
+      .text("Mark as 'rest' time")
       .attr("fill", "black")
       .attr('x', 96)
       .attr('y', svgHeight3 - 15);
@@ -206,16 +212,16 @@
       .attr('ry', 5)
       .attr("width", 192)
       .attr("height", 40)
-      .attr("fill", "#47B200")
-      .attr("stroke", "#143300")
-      .attr("opacity", 0.37)
+      .attr("fill", "#FF2100")
+      .attr("stroke", "#330600")
+      .attr("opacity", 0.4)
       .on("mouseover", function() {
         d3.select(this)
           .attr("opacity", 0.5);
       })
       .on("mouseout", function() {
         d3.select(this)
-          .attr("opacity", 0.37);
+          .attr("opacity", 0.4);
       });
     
     svg1 = svg1
@@ -270,7 +276,7 @@
 
     d3.select('#work-button')
       .on('click', function() {
-        console.log("click work button")
+        //console.log("click work button")
         if (brushedEndTime - brushedStartTime < 60000) return;
         let newAData = annotationData.find(e => e.date === d3.select('#date').node().value).data;
         newAData.push({
@@ -285,7 +291,7 @@
       
     d3.select('#rest-button')
       .on('click', function() {
-        console.log("click rest button")
+        //console.log("click rest button")
         if (brushedEndTime - brushedStartTime < 60000) return;
         let newAData = annotationData.find(e => e.date === d3.select('#date').node().value).data;
         newAData.push({
@@ -357,8 +363,6 @@
 
         // reassign first element to the last element
         this.values[0] = end;
-        console.log("extractMax")
-        console.log({...this.values});
         // heapify down until element is back in its correct position
         this.heapifyDown(0);
     
@@ -413,8 +417,8 @@
       }
 
       delete(element) {
-        console.log(element)
-        console.log(this.values)
+        //console.log(element)
+        //console.log(this.values)
         let deletingIndex = this.values.findIndex(e => e.order === element.order);
         this.values[deletingIndex].order = this.values[0].order + 1;
         this.heapifyUp(deletingIndex);
@@ -618,14 +622,14 @@
       
       d3.select('#foreground-filter')
         .selectAll('option')
-        .data([{'process': 'All'}].concat(thisPData), e => e.process)
+        .data([{'process': 'All processes'}].concat(thisPData), e => e.process)
         .join('option')
         .append('option')
         .property('value', d => d.process)
         .text(d => d.process);
       let foregroundFilter = d3.select('#foreground-filter').node().value;
       let processFilterNum = d3.select('#filter').node().value - 1;
-      if (foregroundFilter !== "All") {
+      if (foregroundFilter !== "All processes") {
         //d3.select('#filter').attr("disabled", true);
         thisFData = thisFData.filter(e => e.process === foregroundFilter);
         thisEData = thisEData.filter(e => e.process === foregroundFilter);
@@ -696,7 +700,7 @@
           tempMaxHeap.delete({'order': e.order, 'annotation': e.annotation});
         }
       });
-      console.log(newSeparators);
+      //console.log(newSeparators);
 
       thisAData = [];
       let count = 0;
@@ -714,7 +718,19 @@
           }
         }
       });
-      console.log(thisAData);
+
+      function annotationToStr(annotationData) {
+        let annotationJson = "{'date': '" + date + "', 'data': [";
+        annotationData.forEach((e, i, array) => {
+          annotationJson += "{'id': " + e.id;
+          annotationJson += ", 'start': " + e.start * 1;
+          annotationJson += ", 'end': " + e.end * 1;
+          annotationJson += ", 'annotation': '"  + e.annotation + "''}";
+          if (i < array.length - 1) annotationJson += ", ";
+        })
+        return annotationJson + "]}";
+      }
+      console.log(annotationToStr(thisAData));
       
       function millisecondToStr(millisecond) {
         if (millisecond < 0) millisecond *= -1;
@@ -727,8 +743,13 @@
         return hour + ":" + minute + ":" + second;
       }
 
+      let restingHours = (thisData[thisData.length - 1].time - thisData[0].time) - workingHours;
+
       d3.select('.time')
-        .text(millisecondToStr(workingHours));
+        .text(millisecondToStr(workingHours) + " (" + (Math.floor(workingHours * 1000 / (thisData[thisData.length - 1].time - thisData[0].time)) / 10) + "%)");
+
+      d3.select('.rest-time')
+        .text(millisecondToStr(restingHours) + " (" + (Math.floor(restingHours * 1000 / (thisData[thisData.length - 1].time - thisData[0].time)) / 10) + "%)");
 
       let barX = d3.scaleTime()
         .domain([
@@ -863,8 +884,8 @@
         .attr('y', d => bar2Y(d.type))
         .attr('height', bar2Y.bandwidth())
         .attr("clip-path", 'url(#clip2)')
-        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
-        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+        .style('fill', d => foregroundFilter === 'All processes' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All processes' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
 
       let bar2Update = graph2.selectAll('rect')
         .data(thisEData, d => d.id)
@@ -873,8 +894,8 @@
         .attr('y', d => bar2Y(d.type))
         .attr('height', bar2Y.bandwidth())
         .attr("clip-path", 'url(#clip2)')
-        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
-        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+        .style('fill', d => foregroundFilter === 'All processes' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All processes' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
 
       let bar2Exit = graph2.selectAll('rect')
         .data(thisEData, d => d.id)
@@ -890,7 +911,7 @@
         .attr('y', d => bar3Y(d.annotation))
         .attr('height', bar3Y.bandwidth())
         .attr("clip-path", 'url(#clip3)')
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE')
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC')
         .style('opacity', 1)
   
       let bar3Update = graph3.selectAll('rect')
@@ -900,7 +921,7 @@
         .attr('y', d => bar3Y(d.annotation))
         .attr('height', bar3Y.bandwidth())
         .attr("clip-path", 'url(#clip3)')
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE')
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC')
   
       let bar3Exit = graph3.selectAll('rect')
         .data(thisAData, d => d.id)
@@ -916,7 +937,7 @@
         .attr("y", margin1.top)
         .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
         .attr("height", svgHeight1 - margin1.top - margin1.bottom)
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE');
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
 
       let bar3Link1Update = d3.select('#annotated-area1')
         .selectAll('rect')
@@ -925,7 +946,7 @@
         .attr("y", margin1.top)
         .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
         .attr("height", svgHeight1 - margin1.top - margin1.bottom)
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE');
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
 
       let bar3Link1Exit = d3.select('#annotated-area1')
         .selectAll('rect')
@@ -944,7 +965,7 @@
         .attr("y", margin2.top)
         .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
         .attr("height", svgHeight2 - margin2.top - margin2.bottom)
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE');
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
 
       let bar3Link2Update = d3.select('#annotated-area2')
         .selectAll('rect')
@@ -953,7 +974,7 @@
         .attr("y", margin2.top)
         .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
         .attr("height", svgHeight2 - margin2.top - margin2.bottom)
-        .style('fill', d => d.annotation === 'Work' ? '#FFD4CC' : '#E1FFCE');
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
 
       let bar3Link2Exit = d3.select('#annotated-area2')
         .selectAll('rect')
@@ -981,6 +1002,13 @@
           return d.annotation + " time\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start);
         });
 
+      bar3Link1Enter.merge(bar3Link1Update)
+        .append('title')
+        .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
+
+      bar3Link2Enter.merge(bar3Link2Update)
+        .append('title')
+        .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
       
       
       let zoom1 = d3.zoom()
@@ -1093,11 +1121,6 @@
             .select('.selection')
             .append('title')
             .text("Start: " + brushedStartTime + "\nEnd:  " + brushedEndTime + "\nDuration: " + millisecondToStr(brushedEndTime - brushedStartTime))
-          d3.selectAll('.annotated-area')
-            .selectAll('rect')
-            .append('title')
-            .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
-          
 
           if (brushedEndTime - brushedStartTime >= 60000) {
             // At least 1 minute can be a work time.
