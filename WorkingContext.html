@@ -21,6 +21,43 @@
       padding-bottom: 6px;
       background: #D1CCFF;
     }
+    .annotating-button {
+      position: absolute;
+      width: 180px;
+      height: 30px;
+      padding: 2px;
+      display: none;
+    }
+    #work-button {
+      background-color: #E1FFCE;
+      background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+      color: black;
+      border: #64D820 2px;
+      border-radius: 2px;
+    }
+    #rest-button {
+      background-color: #FFD4CC;
+      background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+      color: black;
+      border: #D83C20 2px;
+      border-radius: 2px;
+    }
+    #working-hours {
+      float: right;
+      padding-right: 10px;
+    }
+    .time {
+      color: #307F00;
+    }
+    .rest-time {
+      color: #7F1300;
+    }
   </style>
 </head>
 <body>
@@ -28,42 +65,180 @@
     <h1>Working context</h1>
   </div>
   <div class="setting">
-    <select id="date"></select>
-    <select id="foreground-filter"></select>
-    <input id="filter" type="number" min="1" max="20" value="10"/>
+    <span class="inputs">
+      <select id="date"></select>
+      <select id="foreground-filter"></select>
+      <input id="filter" type="number" min="1" max="20" value="10"/>
+    </span>
+    <span id="working-hours">Today's working hours <b class="time">00:00:00 (0%)</b> | resting hours <b class="rest-time">00:00:00 (100%)</b></span>
   </div>
-  <div id="foreground"></div>
-  <div id="events"></div>
+  <div id="global"></div>
+  <!--div id="foreground"></div>
+  <div id="events"></div-->
+  <div>
+    <!--div id="work-box" class="annotating-button"><input type=button id="work-button" value='Mark as "Work" time' onclick=""/></div-->
+    <div id="annotation"></div>
+    <!--div id="rest-box" class="annotating-button"><input type=button id="rest-button" value='Mark as "Rest" time' onclick=""/></div-->
+  </div>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script>
     function translate(x, y) {
       return 'translate(' + x + ', ' + y + ')';
     }
     let svgWidth = screen.width;
-    let svgHeight1 = (screen.height - 121.88) * 0.63;
-    let svgHeight2 = (screen.height - 121.88) * 0.21;
+    let svgHeight1 = (screen.height - 121.88) * 0.52;
+    let svgHeight2 = (screen.height - 121.88) * 0.14;
+    let svgHeight3 = (screen.height - 121.88) * 0.18;
     let margin1 = {top: 25, right: 25, bottom: 25, left: 140};
     let margin2 = {top: 25, right: 25, bottom: 25, left: 140};
+    let margin3 = {top: 41, right: 25, bottom: 41, left: 140};
     let width1 = svgWidth - margin1.left - margin1.right;
     let width2 = svgWidth - margin2.left - margin2.right;
+    let width3 = svgWidth - margin3.left - margin3.right;
     let height1 = svgHeight1 - margin1.top - margin1.bottom;
     let height2 = svgHeight2 - margin2.top - margin2.bottom;
-    let svg1 = d3.select('#foreground')
+    let height3 = svgHeight3 - margin3.top - margin3.bottom;
+    let svg = d3.select("#global")
       .append('svg')
+      .attr("viewBox", [0, 0, svgWidth, (screen.height - 121.88) * 0.66])
+      .attr("width", "100%")
+      .attr("height", "66%")
+      .attr('class', 'svg')
+    let svg1 = d3.select('.svg')
+      .append('g')
       .attr("viewBox", [0, 0, svgWidth, svgHeight1])
       .attr('width', "100%")
-      .attr('height', "63%")
-      .attr('class', 'svg1')
+      .attr('height', "52%")
+      .attr('class', 'svg1');
+    let svg2 = d3.select('.svg')
       .append('g')
-      .attr('transform', translate(margin1.left, margin1.top));
-    let svg2 = d3.select('#events')
-      .append('svg')
       .attr("viewBox", [0, 0, svgWidth, svgHeight2])
       .attr('width', "100%")
-      .attr('height', "21%")
-      .attr('class', 'svg2')
+      .attr('height', "14%")
+      .attr('transform', "translate(0, " + (screen.height - 121.88) * 0.52 + ")")
+      .attr('class', 'svg2');
+    let svg3 = d3.select('#annotation')
+      .append('svg')
+      .attr("viewBox", [0, 0, svgWidth, svgHeight3])
+      .attr('width', "100%")
+      .attr('height', "18%")
+      .attr('class', 'svg3')
+    
+    svg1
       .append('g')
-      .attr('transform', translate(margin2.left, margin2.top));
+      .attr('class', 'annotated-area')
+      .attr('id', 'annotated-area1')
+    
+    svg1
+      .append('g')
+      .attr('class', 'brushed-area')
+      .attr('id', 'brushed-area1')
+      .append('rect')
+      .attr("fill", "#D1CEFF")
+      .attr("x", margin1.left)
+      .attr("y", margin1.top)
+      .attr("width", 0)
+      .attr("height", svgHeight1 - margin1.top - margin1.bottom);
+    
+    svg2
+      .append('g')
+      .attr('class', 'annotated-area')
+      .attr('id', 'annotated-area2')
+    
+    svg2
+      .append('g')
+      .attr('class', 'brushed-area')
+      .attr('id', 'brushed-area2')
+      .append('rect')
+      .attr("fill", "#D1CEFF")
+      .attr("x", margin2.left)
+      .attr("y", margin2.top)
+      .attr("width", 0)
+      .attr("height", svgHeight2 - margin2.top - margin2.bottom);
+
+    svg3
+      .append('g')
+      .attr('class', 'brush')
+      .append('rect')
+      .attr("fill", "#E7E5FF")
+      .attr("x", margin3.left)
+      .attr("y", margin3.top)
+      .attr("width", svgWidth - margin3.left - margin3.right)
+      .attr("height", svgHeight3 - margin3.top - margin3.bottom)
+      .style("display", "none");
+
+    svg3
+      .append('g')
+      .attr('class', 'annotating-button')
+      .attr('text-anchor', 'middle')
+      .append('text')
+      .text("Mark as 'work' time")
+      .attr("fill", "black")
+      .attr('x', 96)
+      .attr('y', 25);
+      
+    d3.select('.annotating-button')
+      .append('rect')
+      .attr('id', "work-button")
+      .attr('y', 0)
+      .attr('rx', 5)
+      .attr('ry', 5)
+      .attr("width", 192)
+      .attr("height", 40)
+      .attr("fill", "#5BE500")
+      .attr("stroke", "#143300")
+      .attr("opacity", 0.4)
+      .on("mouseover", function() {
+        d3.select(this)
+          .attr("opacity", 0.5);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("opacity", 0.4);
+      });
+
+    d3.select('.annotating-button')
+      .append('text')
+      .text("Mark as 'rest' time")
+      .attr("fill", "black")
+      .attr('x', 96)
+      .attr('y', svgHeight3 - 15);
+      
+    d3.select('.annotating-button')
+      .append('rect')
+      .attr('id', "rest-button")
+      .attr('y', svgHeight3 - 40)
+      .attr('rx', 5)
+      .attr('ry', 5)
+      .attr("width", 192)
+      .attr("height", 40)
+      .attr("fill", "#FF2100")
+      .attr("stroke", "#330600")
+      .attr("opacity", 0.4)
+      .on("mouseover", function() {
+        d3.select(this)
+          .attr("opacity", 0.5);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("opacity", 0.4);
+      });
+    
+    svg1 = svg1
+      .append('g')
+      .attr('transform', translate(margin1.left, margin1.top));
+    
+    svg2 = svg2
+      .append('g')
+      .attr('transform', translate(margin1.left, margin1.top));
+    
+    svg3 = svg3
+      .append('g')
+      .attr('transform', translate(margin3.left, margin3.top));
+
+    let brushGroup = d3.select(".svg3")
+      .append('g')
+    
     let clip1 = svg1.append("clipPath")
       .attr("id", 'clip1')
       .append("rect")
@@ -82,16 +257,185 @@
       .attr('class', 'graph1');
     let graph2 = svg2.append('g')
       .attr('class', 'graph2');
+    let graph3 = svg3.append('g')
+      .attr('class', 'graph3');
 
     let files = [
       // Please add your data in the list!
-      // {'filename': './Data/ChordingCoding_context_log_YYMMDD.csv', 'date': 'YYMMDD'},
+      // {'filename': './Data/ChordingCoding_context_log_YYMMDD.csv'},
     ];
     let allData = [];
     let foregroundData = [];
     let eventData = [];
     let processData = [];
+    let annotationData = [];
     let ready = 0;
+
+    let brushedStartTime = new Date(2021, 0, 1);
+    let brushedEndTime = new Date(2021, 0, 1);
+
+    d3.select('#work-button')
+      .on('click', function() {
+        //console.log("click work button")
+        if (brushedEndTime - brushedStartTime < 60000) return;
+        let newAData = annotationData.find(e => e.date === d3.select('#date').node().value).data;
+        newAData.push({
+          'id': newAData.length,
+          'start': brushedStartTime,
+          'end': brushedEndTime,
+          'annotation': "Work"
+        });
+        brushedEndTime = brushedStartTime;
+        update();
+      });
+      
+    d3.select('#rest-button')
+      .on('click', function() {
+        //console.log("click rest button")
+        if (brushedEndTime - brushedStartTime < 60000) return;
+        let newAData = annotationData.find(e => e.date === d3.select('#date').node().value).data;
+        newAData.push({
+          'id': newAData.length,
+          'start': brushedStartTime,
+          'end': brushedEndTime,
+          'annotation': "Rest"
+        });
+        brushedEndTime = brushedStartTime;
+        update();
+      });
+
+    // https://reginafurness.medium.com/implementing-a-max-heap-in-javascript-b3e2f788390c
+    class MaxHeap {
+      /* element format: {'order': Number, ...} */
+      constructor() {
+        this.values = [];
+      }
+
+      parent(index) {
+        return Math.floor((index - 1) / 2);
+      }
+
+      leftChild(index) {
+        return (index * 2) + 1;
+      }
+
+      rightChild(index) {
+        return (index * 2) + 2;
+      }
+
+      isLeaf(index) {
+        return (
+            index >= Math.floor(this.values.length / 2) && index <= this.values.length - 1
+        )
+      }
+
+      swap(index1, index2) {
+        [this.values[index1], this.values[index2]] = [this.values[index2], this.values[index1]];
+      }
+
+      add(element) {
+        // add element to the end of the heap
+        this.values.push(element);
+        // move element up until it's in the correct position
+        this.heapifyUp(this.values.length - 1);
+      }
+
+      heapifyUp(index) {
+        let currentIndex = index,
+            parentIndex = this.parent(currentIndex);
+    
+        // while we haven't reached the root node and the current element is greater than its parent node
+        while (currentIndex > 0 && this.values[currentIndex].order > this.values[parentIndex].order) {
+            // swap
+            this.swap(currentIndex, parentIndex);
+            // move up the binary heap
+            currentIndex = parentIndex;
+            parentIndex = this.parent(parentIndex);
+        }
+      }
+
+      extractMax() {
+        if (this.values.length < 1) return 'heap is empty';
+    
+        // get max and last element
+        const max = this.values[0];
+        const end = this.values.pop();
+
+        // reassign first element to the last element
+        this.values[0] = end;
+        // heapify down until element is back in its correct position
+        this.heapifyDown(0);
+    
+        // return the max
+        return max;
+      }
+
+      heapifyDown(index) {
+        // if the node at index has children
+        if (!this.isLeaf(index)) {
+    
+            // get indices of children
+            let leftChildIndex = this.leftChild(index),
+                rightChildIndex = this.rightChild(index),
+    
+                // start out largest index at parent index
+                largestIndex = index;
+    
+            // if the left child > parent
+            if (this.values[leftChildIndex].order > this.values[largestIndex].order) {
+                // reassign largest index to left child index
+                largestIndex = leftChildIndex;
+            }
+    
+            // if the right child > element at largest index (either parent or left child)
+            if (rightChildIndex < this.values.length &&
+                this.values[rightChildIndex].order >= this.values[largestIndex].order) {
+                // reassign largest index to right child index
+                largestIndex = rightChildIndex;
+            }
+    
+            // if the largest index is not the parent index
+            if (largestIndex !== index) {
+                // swap
+                this.swap(index, largestIndex);
+                // recursively move down the heap
+                this.heapifyDown(largestIndex);
+            }
+        }
+      }
+
+      buildHeap(array) {
+        this.values = array;
+        // since leaves start at floor(nodes / 2) index, we work from the leaves up the heap
+        for(let i = Math.floor(this.values.length / 2); i >= 0; i--){
+            this.heapifyDown(i);
+        }
+      }
+
+      peek() {
+        return this.values[0];
+      }
+
+      delete(element) {
+        //console.log(element)
+        //console.log(this.values)
+        let deletingIndex = this.values.findIndex(e => e.order === element.order);
+        this.values[deletingIndex].order = this.values[0].order + 1;
+        this.heapifyUp(deletingIndex);
+
+        return this.extractMax();
+      }
+
+      print() {
+        let i = 0;
+        while (!this.isLeaf(i)) {
+            console.log("PARENT:", this.values[i]);
+            console.log("LEFT CHILD:", this.values[this.leftChild(i)]);
+            console.log("RIGHT CHILD:", this.values[this.rightChild(i)]);
+            i++;
+        }      
+      }
+    }
     
     function init() {
       files.forEach(function (x, i, a) {
@@ -120,7 +464,7 @@
             }
             newD.push(newRow);
           });
-          allData.push({'date': x.date, 'data': newD});
+          allData.push({'date': x.filename.substring(34, 40), 'data': newD});
           //console.log(allData)
           let newFD2 = [];
           let processList = [];
@@ -150,7 +494,7 @@
           processList.sort(function(a, b) {
             return b.durationSum - a.durationSum;
           });
-          processData.push({'date': x.date, 'data': processList});
+          processData.push({'date': x.filename.substring(34, 40), 'data': processList});
           let newFD3 = [];
           newFD2.forEach(function (row, index, array) {
             let i = processList.findIndex(e => row.process === e.process);
@@ -159,7 +503,7 @@
             }
             newFD3.push(fRow);
           });
-          foregroundData.push({'date': x.date, 'data': newFD3});
+          foregroundData.push({'date': x.filename.substring(34, 40), 'data': newFD3});
           //console.log(newFD3);
           let prevTime = new Date(2021, 0, 1);
           let prevProcess = '';
@@ -193,12 +537,33 @@
               }
             )
           })
-          eventData.push({'date': x.date, 'data': aggrEData});
+          eventData.push({'date': x.filename.substring(34, 40), 'data': aggrEData});
           //console.log(newED);
+          
+          let newAD = [];
+          fetch("./Meta/Annotation_" + x.filename.substring(34, 40) + ".csv")
+            .then(response => {
+              if (!response.ok) {
+                console.log(response);
+                //throw new Error("unable to fetch"); // Creating a new .csv file is impossible on pure HTML
+                //fs.writeFileSync('./Meta/Annotation_' + x.filename.substring(34, 40) + ".csv", "id,start,end,annotation\n")
+                return "";
+              }
+              return response.text();
+            }).then(function (d){
+              d3.csvParse(d, d3.autoType).forEach(function (row, index, array) {
+                row.start = new Date(row.start);
+                row.end = new Date(row.end);
+                newAD.push(row);
+              });
+              update();
+          });
+          annotationData.push({'date': x.filename.substring(34, 40), 'data': newAD});
+
           ready += 1;
           
           if (ready == files.length){
-            let dates = files.map(e => e.date);
+            let dates = files.map(e => e.filename.substring(34, 40));
             let dateSelect = d3.select('#date')
               .selectAll('option')
               .data(dates)
@@ -219,33 +584,52 @@
             let svg2YAxis = svg2.append('g')
               .attr('class', 'svg2YAxis')
               .attr('transform', translate(0, 0));
+            let svg3XAxis = svg3.append('g')
+              .attr('class', 'svg3XAxis')
+              .attr('transform', translate(0, height3 / 2));
+            let svg3YAxis = svg3.append('g')
+              .attr('class', 'svg3YAxis')
+              .attr('transform', translate(0, 0));
 
-            update();
+            d3.select('.brush')
+              .select('rect')
+              .style('display', null)
+
+            update(true);
           }
         });
       });
     }
 
-    function update() {
+    function update(reinit = false) {
       if (ready < files.length) return;
       let date = d3.select('#date').node().value;
-      //console.log(allData)
       let thisData = allData.find(e => e.date === date).data;
       let thisFData = foregroundData.find(e => e.date === date).data;
       let thisEData = eventData.find(e => e.date === date).data;
       let thisPData = processData.find(e => e.date === date).data;
+      //console.log(annotationData);
+      //console.log(new Date(2022, 10, 11, 14, 16, 31) * 1);
+      //console.log(new Date(2022, 10, 11, 15, 28, 16) * 1);
+      //console.log(new Date(2022, 10, 11, 12, 53, 07) * 1);
+      //console.log(new Date(2022, 10, 11, 13, 47, 39) * 1);
+      let thisAData = annotationData.find(e => e.date === date).data;
+      //console.log(thisAData);
+      // Dummy data
+      //thisAData.push({'id': 0, 'start': new Date(2022, 10, 11, 14, 16, 31), 'end': new Date(2022, 10, 11, 15, 28, 16), 'annotation': 'Work'});
+      //thisAData.push({'id': 1, 'start': new Date(2022, 10, 11, 12, 53, 07), 'end': new Date(2022, 10, 11, 13, 47, 39), 'annotation': 'Rest'});
       let animationDuration = 1200;
       
       d3.select('#foreground-filter')
         .selectAll('option')
-        .data([{'process': 'All'}].concat(thisPData), e => e.process)
+        .data([{'process': 'All processes'}].concat(thisPData), e => e.process)
         .join('option')
         .append('option')
         .property('value', d => d.process)
         .text(d => d.process);
       let foregroundFilter = d3.select('#foreground-filter').node().value;
       let processFilterNum = d3.select('#filter').node().value - 1;
-      if (foregroundFilter !== "All") {
+      if (foregroundFilter !== "All processes") {
         //d3.select('#filter').attr("disabled", true);
         thisFData = thisFData.filter(e => e.process === foregroundFilter);
         thisEData = thisEData.filter(e => e.process === foregroundFilter);
@@ -254,12 +638,127 @@
       else if (processFilterNum > thisPData.length) processFilterNum = thisPData.length;
       d3.select('#filter').property('value', processFilterNum + 1)
 
-      let bar1X = d3.scaleTime()
+      let separators = [];
+      let newSeparators = [];
+      thisAData.forEach(e => {
+        separators.push({
+          'order': e.id,
+          'time': e.start,
+          'is_end': false,
+          'annotation': e.annotation
+        });
+        separators.push({
+          'order': e.id,
+          'time': e.end,
+          'is_end': true,
+          'annotation': e.annotation
+        });
+      });
+      separators.sort((a, b) => {
+        return a.time - b.time;
+      });
+      //console.log(separators);
+      let tempAnnotation = "Empty";
+      let tempAnnotationOrder = -1;
+      let tempMaxHeap = new MaxHeap();
+      separators.forEach(e => {
+        if (!e.is_end && e.order > tempAnnotationOrder) {
+          //console.log("start high")
+          tempMaxHeap.add({'order': tempAnnotationOrder, 'annotation': tempAnnotation});
+          //console.log({'order': tempAnnotationOrder, 'annotation': tempAnnotation})
+          //console.log(tempMaxHeap.values);
+          if (e.annotation !== tempAnnotation) {
+            newSeparators.push({'time': e.time, 'annotation': e.annotation});
+          }
+          tempAnnotation = e.annotation;
+          tempAnnotationOrder = e.order;
+        }
+        else if (!e.is_end && e.order < tempAnnotationOrder) {
+          //console.log("start low")
+          tempMaxHeap.add({'order': e.order, 'annotation': e.annotation});
+          //console.log({'order': e.order, 'annotation': e.annotation})
+        }
+        else if (!e.is_end) {
+          console.log("why happened? Starting point with same order cannot be exist!")
+        }
+        else if (e.order > tempAnnotationOrder) {
+          console.log("why happened? Ending point with higher order cannot be exist!")
+        }
+        else if (e.order === tempAnnotationOrder) {
+          //console.log("end same")
+          //console.log({...tempMaxHeap.values})
+          let oldElement = tempMaxHeap.extractMax();
+          //console.log({...tempMaxHeap.values})
+          if (oldElement.annotation !== tempAnnotation) {
+            newSeparators.push({'time': e.time, 'annotation': oldElement.annotation});
+          }
+          tempAnnotation = oldElement.annotation;
+          tempAnnotationOrder = oldElement.order;
+        }
+        else {
+          //console.log("end low")
+          tempMaxHeap.delete({'order': e.order, 'annotation': e.annotation});
+        }
+      });
+      //console.log(newSeparators);
+
+      thisAData = [];
+      let count = 0;
+      let workingHours = 0;
+      newSeparators.forEach((e, i, array) => {
+        if (e.annotation !== "Empty" && i < array.length - 1) {
+          thisAData.push({
+            'id': count++,
+            'start': e.time,
+            'end': array[i + 1].time,
+            'annotation': e.annotation
+          });
+          if (e.annotation === "Work") {
+            workingHours += array[i + 1].time - e.time;
+          }
+        }
+      });
+
+      function annotationToStr(annotationData) {
+        let annotationJson = "{'date': '" + date + "', 'data': [";
+        annotationData.forEach((e, i, array) => {
+          annotationJson += "{'id': " + e.id;
+          annotationJson += ", 'start': " + e.start * 1;
+          annotationJson += ", 'end': " + e.end * 1;
+          annotationJson += ", 'annotation': '"  + e.annotation + "''}";
+          if (i < array.length - 1) annotationJson += ", ";
+        })
+        return annotationJson + "]}";
+      }
+      console.log(annotationToStr(thisAData));
+      
+      function millisecondToStr(millisecond) {
+        if (millisecond < 0) millisecond *= -1;
+        let hour = Math.floor(millisecond / 1000 / 60 / 60);
+        if (hour < 10) hour = "0" + hour;
+        let minute = Math.floor((millisecond / 1000 / 60) % 60);
+        if (minute < 10) minute = "0" + minute;
+        let second = Math.floor(((millisecond + 500) / 1000) % 60);
+        if (second < 10) second = "0" + second;
+        return hour + ":" + minute + ":" + second;
+      }
+
+      let restingHours = (thisData[thisData.length - 1].time - thisData[0].time) - workingHours;
+
+      d3.select('.time')
+        .text(millisecondToStr(workingHours) + " (" + (Math.floor(workingHours * 1000 / (thisData[thisData.length - 1].time - thisData[0].time)) / 10) + "%)");
+
+      d3.select('.rest-time')
+        .text(millisecondToStr(restingHours) + " (" + (Math.floor(restingHours * 1000 / (thisData[thisData.length - 1].time - thisData[0].time)) / 10) + "%)");
+
+      let barX = d3.scaleTime()
         .domain([
           thisData[0].time,
           thisData[thisData.length - 1].time
         ])
         .range([0, width1])
+      let barXZoomed = d3.zoomTransform(d3.select('.svg').node()).rescaleX(barX);
+
       let filteredPData = thisPData.filter((d, i) => i < processFilterNum).map(d => d.process);
       filteredPData.push('others')
       let bar1YTick = d3.scaleBand()
@@ -272,7 +771,7 @@
           .domain(filteredPData)
           .range([0, height1])(p);
       }
-      let bar1XAxis = d3.axisBottom(bar1X);
+      let bar1XAxis = d3.axisBottom(barXZoomed);
       let bar1YAxis = d3.axisLeft(bar1YTick);
       svg1XAxis = d3.select('.svg1XAxis')
         //.transition()
@@ -290,7 +789,8 @@
         'ChordingCoding','GoogleDriveFS','rstudio','SnippingTool','slack',
         'NWC2','POWERPNT','chrome','devenv','obs64',
         'wmplayer','HncDic','Melon Player','powershell','putty',
-        'audacity','Spotify','paintdotnet','mintty','WindowsTerminal'];
+        'audacity','Spotify','paintdotnet','mintty','WindowsTerminal',
+        'mspaint'];
         if (!(processDomain.includes(p))) return '#404040'
         return d3.scaleOrdinal()
           .domain(processDomain)
@@ -300,20 +800,15 @@
             '#43E143', '#FFBA00', '#75AADB', '#E52D2D', '#E01E5A',
             '#00FFFF', '#BC3617', '#2D7CEE', '#A679DD', '#1B181B',
             '#F68D2B', '#996A34', '#1ED255', '#467AD6', '#0000FF',
-            '#0000EB', '#1ED760', '#3969BA', '#F97F7C', '#404040'
+            '#0000EB', '#1ED760', '#3969BA', '#F97F7C', '#404040',
+            '#A7D0E4'
           ])(p);
       }
-      
-      let bar2X = d3.scaleTime()
-        .domain([
-          thisData[0].time,
-          thisData[thisData.length - 1].time
-        ])
-        .range([0, width1])
+
       let bar2Y = d3.scaleBand()
         .domain(['Key stroke', 'Mouse click'])
         .range([0, height2]);
-      let bar2XAxis = d3.axisBottom(bar2X);
+      let bar2XAxis = d3.axisBottom(barXZoomed);
       let bar2YAxis = d3.axisLeft(bar2Y);
       svg2XAxis = d3.select('.svg2XAxis')
         //.transition()
@@ -328,12 +823,26 @@
           .domain(['Key stroke', 'Mouse click'])
           .range(['#404040', '#404040', '#404040']);
       
+      let bar3Y = d3.scaleBand()
+        .domain(['Work', 'Rest'])
+        .range([0, height3]);
+      let bar3XAxis = d3.axisBottom(barXZoomed);
+      let bar3YAxis = d3.axisLeft(bar3Y);
+      svg3XAxis = d3.select('.svg3XAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar3XAxis);
+      svg3YAxis = d3.select('.svg3YAxis')
+        //.transition()
+        //.duration(animationDuration)
+        .call(bar3YAxis);
+
       let bar1Enter = graph1.selectAll('rect')
         .data(thisFData, d => d.id)
         .enter()
         .append('rect')
-        .attr('x', d => bar1X(d.time))
-        .attr('width', d => Math.abs(bar1X(d.end) - bar1X(d.time)))
+        .attr('x', d => barXZoomed(d.time))
+        .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.time)))
         .attr('y', d => bar1YTickOthers(d.process))
         .attr('height', bar1YTick.bandwidth())
         .attr("clip-path", 'url(#clip1)')
@@ -348,8 +857,8 @@
         .data(thisFData, d => d.id)
         //.transition()
         //.duration(animationDuration)
-        .attr('x', d => bar1X(d.time))
-        .attr('width', d => Math.abs(bar1X(d.end) - bar1X(d.time)))
+        .attr('x', d => barXZoomed(d.time))
+        .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.time)))
         .attr('y', d => bar1YTickOthers(d.process))
         .attr('height', bar1YTick.bandwidth())
         .attr("clip-path", 'url(#clip1)')
@@ -370,67 +879,299 @@
         .data(thisEData, d => d.id)
         .enter()
         .append('rect')
-        .attr('x', d => bar2X(d.onset))
-        .attr('width', d => Math.abs(bar2X(d.offset) - bar2X(d.onset)))
+        .attr('x', d => barXZoomed(d.onset))
+        .attr('width', d => Math.abs(barXZoomed(d.offset) - barXZoomed(d.onset)))
         .attr('y', d => bar2Y(d.type))
         .attr('height', bar2Y.bandwidth())
         .attr("clip-path", 'url(#clip2)')
-        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
-        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+        .style('fill', d => foregroundFilter === 'All processes' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All processes' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
 
       let bar2Update = graph2.selectAll('rect')
         .data(thisEData, d => d.id)
-        .attr('x', d => bar2X(d.onset))
-        .attr('width', d => Math.abs(bar2X(d.offset) - bar2X(d.onset)))
+        .attr('x', d => barXZoomed(d.onset))
+        .attr('width', d => Math.abs(barXZoomed(d.offset) - barXZoomed(d.onset)))
         .attr('y', d => bar2Y(d.type))
         .attr('height', bar2Y.bandwidth())
         .attr("clip-path", 'url(#clip2)')
-        .style('fill', d => foregroundFilter === 'All' ? bar1Color(d.process) : bar2Color(d.type))
-        .style('opacity', d => foregroundFilter === 'All' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
+        .style('fill', d => foregroundFilter === 'All processes' ? bar1Color(d.process) : bar2Color(d.type))
+        .style('opacity', d => foregroundFilter === 'All processes' ? 1 : d.count * 200 / Math.abs(d.offset - d.onset))
 
       let bar2Exit = graph2.selectAll('rect')
         .data(thisEData, d => d.id)
         .exit()
         .remove();
+      
+      let bar3Enter = graph3.selectAll('rect')
+        .data(thisAData, d => d.id)
+        .enter()
+        .append('rect')
+        .attr('x', d => barXZoomed(d.start))
+        .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr('y', d => bar3Y(d.annotation))
+        .attr('height', bar3Y.bandwidth())
+        .attr("clip-path", 'url(#clip3)')
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC')
+        .style('opacity', 1)
+  
+      let bar3Update = graph3.selectAll('rect')
+        .data(thisAData, d => d.id)
+        .attr('x', d => barXZoomed(d.start))
+        .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr('y', d => bar3Y(d.annotation))
+        .attr('height', bar3Y.bandwidth())
+        .attr("clip-path", 'url(#clip3)')
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC')
+  
+      let bar3Exit = graph3.selectAll('rect')
+        .data(thisAData, d => d.id)
+        .exit()
+        .remove();
 
+      let bar3Link1Enter = d3.select('#annotated-area1')
+        .selectAll('rect')
+        .data(thisAData, d => d.id)
+        .enter()
+        .append('rect')
+        .attr("x", d => margin1.left + barXZoomed(d.start))
+        .attr("y", margin1.top)
+        .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr("height", svgHeight1 - margin1.top - margin1.bottom)
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
+
+      let bar3Link1Update = d3.select('#annotated-area1')
+        .selectAll('rect')
+        .data(thisAData, d => d.id)
+        .attr("x", d => margin1.left + barXZoomed(d.start))
+        .attr("y", margin1.top)
+        .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr("height", svgHeight1 - margin1.top - margin1.bottom)
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
+
+      let bar3Link1Exit = d3.select('#annotated-area1')
+        .selectAll('rect')
+        .data(thisAData, d => {
+          return d.id
+        })
+        .exit()
+        .remove();
+
+      let bar3Link2Enter = d3.select('#annotated-area2')
+        .selectAll('rect')
+        .data(thisAData, d => d.id)
+        .enter()
+        .append('rect')
+        .attr("x", d => margin2.left + barXZoomed(d.start))
+        .attr("y", margin2.top)
+        .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr("height", svgHeight2 - margin2.top - margin2.bottom)
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
+
+      let bar3Link2Update = d3.select('#annotated-area2')
+        .selectAll('rect')
+        .data(thisAData, d => d.id)
+        .attr("x", d => margin2.left + barXZoomed(d.start))
+        .attr("y", margin2.top)
+        .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        .attr("height", svgHeight2 - margin2.top - margin2.bottom)
+        .style('fill', d => d.annotation === 'Work' ? '#E1FFCE' : '#FFD4CC');
+
+      let bar3Link2Exit = d3.select('#annotated-area2')
+        .selectAll('rect')
+        .data(thisAData, d => d.id)
+        .exit()
+        .remove();
+
+      bar1Enter.merge(bar1Update)
+        .append("title")
+        .text(function(d) {
+          return "Process: " + d.process + "\nWindow title: " + d.window +
+          "\nStart: " + d.time + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.time);
+        });
+
+      bar2Enter.merge(bar2Update)
+        .append("title")
+        .text(function(d) {
+          return d.type + "\nProcess: " + d.process + "\nEvent count: " + d.count +
+          "\nStart: " + d.onset + "\nEnd:  " + d.offset + "\nDuration: " + millisecondToStr(d.offset - d.onset);
+        });
+
+      bar3Enter.merge(bar3Update)
+        .append("title")
+        .text(function(d) {
+          return d.annotation + " time\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start);
+        });
+
+      bar3Link1Enter.merge(bar3Link1Update)
+        .append('title')
+        .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
+
+      bar3Link2Enter.merge(bar3Link2Update)
+        .append('title')
+        .text(d => d.annotation + "\nStart: " + d.start + "\nEnd:  " + d.end + "\nDuration: " + millisecondToStr(d.end - d.start))
+      
       
       let zoom1 = d3.zoom()
         .scaleExtent([1, 32])
         .extent([[0, 0], [width1, svgHeight1]])
         .translateExtent([[0, -Infinity], [width1, Infinity]])
         .on("zoom", zoomed);
-      
-      let zoom2 = d3.zoom()
-        .scaleExtent([1, 32])
-        .extent([[0, 0], [width2, svgHeight2]])
-        .translateExtent([[0, -Infinity], [width2, Infinity]])
-        .on("zoom", zoomed);
-
-      d3.select('.svg1').call(zoom1);
-      d3.select('.svg2').call(zoom2);
 
       function zoomed(event) {
-        let xz1 = event.transform.rescaleX(bar1X);
-        let xz2 = event.transform.rescaleX(bar2X);
-        let scaleFactor = event.transform.k;
+        //if (event.type === "start" || event.type === "brush" || event.type === "end") return;
+
+        //console.log(d3.zoomTransform(this))
+        //console.log(this)
+        //barXZoomed = event.transform.rescaleX(barX);
+        //let scaleFactor = event.transform.k;
+        barXZoomed = d3.zoomTransform(d3.select('.svg').node()).rescaleX(barX);
+        let scaleFactor = d3.zoomTransform(d3.select('.svg').node()).k;
+
         graph1.selectAll('rect')
           .data(thisFData, d => d.id)
-          .attr('x', d => xz1(d.time))
-          .attr('width', d => Math.abs(xz1(d.end) - xz1(d.time)));
+          .attr('x', d => barXZoomed(d.time))
+          .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.time)));
         graph2.selectAll('rect')
           .data(thisEData, d => d.id)
-          .attr('x', d => xz2(d.onset))
-          .attr('width', d => Math.abs(xz2(d.offset) - xz2(d.onset)));
-        svg1XAxis.call(d3.axisBottom(xz1));
-        svg2XAxis.call(d3.axisBottom(xz2));
+          .attr('x', d => barXZoomed(d.onset))
+          .attr('width', d => Math.abs(barXZoomed(d.offset) - barXZoomed(d.onset)));
+        graph3.selectAll('rect')
+          .data(thisAData, d => d.id)
+          .attr('x', d => barXZoomed(d.start))
+          .attr('width', d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)));
+        d3.selectAll('.annotated-area')
+          .selectAll('rect')
+          .attr("x", d => margin1.left + barXZoomed(d.start))
+          .attr("width", d => Math.abs(barXZoomed(d.end) - barXZoomed(d.start)))
+        brushGroup
+          .call(
+            brush.move,
+            [brushedStartTime, brushedEndTime]
+              .map(barXZoomed)
+              .map(x => x + margin3.left)
+          );
+        
+        svg1XAxis.call(d3.axisBottom(barXZoomed));
+        svg2XAxis.call(d3.axisBottom(barXZoomed));
+        svg3XAxis.call(d3.axisBottom(barXZoomed));
+      }
+
+      
+      let brush = d3.brushX()
+        .extent([[margin3.left, margin3.top], [svgWidth - margin3.right, svgHeight3 - margin3.bottom]])
+        .on("start brush end", brushed);
+
+      let brushHandle = (g, s) => g
+        .selectAll(".handle--custom")
+        .data([{type: "w"}, {type: "e"}])
+        .attr("display", s === null ? "none" : null)
+        .attr("transform", s === null ? null : (d, i) => `translate(${s[i]},${margin3.top})`)
+      
+      function brushed(event) {
+        //console.log(event);
+        //if (event.type === "zoom") return;
+        const selection = event.selection;
+        //console.log(selection);
+        if (selection === null) {
+          const [mx] = d3.pointer(event, this);
+          d3.select(this).call(brush.move, [mx, mx]);
+          d3.selectAll('.brushed-area')
+            .select('rect')
+            .attr("x", mx)
+            .attr("width", 0)
+          d3.selectAll('.annotating-button')
+            .style("display", "none")
+          
+          if (event.type === "end") {
+            brushedStartTime = barXZoomed.invert(mx - margin3.left);
+            brushedEndTime = barXZoomed.invert(mx - margin3.left);
+          }
+          return;
+        }
+
+        const sx = selection.map(x => x - margin3.left).map(barXZoomed.invert);
+        //circle.attr("stroke", d => sx[0] <= d && d <= sx[1] ? "red" : null);
+        d3.select(this).call(brushHandle, selection);
+        
+        d3.selectAll('.brushed-area')
+          .select('rect')
+          .attr("x", selection[0])
+          .attr("width", selection[1] - selection[0])
+
+        if (event.type === "end") {
+          //console.log(d3.zoomTransform(d3.select('.svg').node()).rescaleX(barX).invert(0), d3.zoomTransform(d3.select('.svg').node()).rescaleX(barX).invert(width1))
+          //console.log(sx[0], sx[1]);
+          brushedStartTime = sx[0];
+          brushedEndTime = sx[1];
+          
+          while (d3.select('#brushed-area1').node().getElementsByTagName('title').length > 0) {
+            d3.select('#brushed-area1').node().getElementsByTagName('title')[0].remove();
+          }
+          while (d3.select('#brushed-area2').node().getElementsByTagName('title').length > 0) {
+            d3.select('#brushed-area2').node().getElementsByTagName('title')[0].remove();
+          }
+          while (d3.select('.svg3').select('.selection').node().getElementsByTagName('title').length > 0) {
+            d3.select('.svg3').select('.selection').node().getElementsByTagName('title')[0].remove();
+          }
+          d3.selectAll('.brushed-area')
+            .select('rect')
+            .append('title')
+            .text("Start: " + brushedStartTime + "\nEnd:  " + brushedEndTime + "\nDuration: " + millisecondToStr(brushedEndTime - brushedStartTime))
+          d3.select('.svg3')
+            .select('.selection')
+            .append('title')
+            .text("Start: " + brushedStartTime + "\nEnd:  " + brushedEndTime + "\nDuration: " + millisecondToStr(brushedEndTime - brushedStartTime))
+
+          if (brushedEndTime - brushedStartTime >= 60000) {
+            // At least 1 minute can be a work time.
+            // TODO display a dialog
+            d3.selectAll('.annotating-button')
+              .style("display", "inline")
+              .attr("transform", "translate(" + (margin3.left - 96 + (barXZoomed(brushedStartTime) + barXZoomed(brushedEndTime)) / 2) + ", 0)")
+          }
+        }
+        else {
+          d3.selectAll('.annotating-button')
+            .style("display", "none")
+        }
       }
       
+      brushGroup
+        .call(brush)
+        .call(
+          brush.move,
+          [brushedStartTime, brushedEndTime]
+            .map(barXZoomed)
+            .map(x => x + margin3.left)
+        )
+        .on('mouseover', function() {
+          d3.select('.brush')
+            .select('rect')
+            .attr("fill", "#D1CEFF");
+        })
+        .on('mouseout', function() {
+          d3.select('.brush')
+            .select('rect')
+            .attr("fill", "#E7E5FF");
+        })
+
+      d3.select(".svg3")
+        .select(".selection")
+        .attr("fill", "#765EFF")
+        .attr("stroke", "#413591")
+      
+      d3.select('.svg').call(zoom1);
+      if (reinit) {
+        d3.select('.svg').call(zoom1.transform, d3.zoomIdentity)
+      }
     }
 
     init();
 
     d3.select('#date').on('change', function(event, k) {
-      update();
+      brushedStartTime = new Date(2021, 0, 1);
+      brushedEndTime = new Date(2021, 0, 1);
+      update(true);
     });
 
     d3.select('#filter').on('change', function(event, k) {
